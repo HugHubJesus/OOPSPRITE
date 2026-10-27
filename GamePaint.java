@@ -16,6 +16,7 @@ public class GamePaint extends JPanel implements Runnable {
     private static final int WAIT_TIME = 80;
     private int waitTime = 0;
     private boolean dying = false;   // true = กำลังตาย, false = กำลังผ่านด่าน
+    private boolean atDoor = false;  // เข้าประตูแล้ว ไก่หายเข้าไปรอเพื่อนในประตู
     private Player player = new Player(SPAWN_X, SPAWN_Y, "white");
 
     // เล่นกับเพื่อน (network = null คือเล่นคนเดียว)
@@ -59,7 +60,7 @@ public class GamePaint extends JPanel implements Runnable {
             // ส่งตำแหน่งเราไป แล้วย้ายไก่เพื่อนไปตามตำแหน่งที่ได้มา
             friendHere = null;
             if (network != null) {
-                network.send(levelNumber, player.getBounds().x, player.getBounds().y, deaths);
+                network.send(levelNumber, player.getBounds().x, player.getBounds().y, deaths, atDoor);
                 friend.moveTo(network.friendX, network.friendY);
                 if (network.friendLevel == levelNumber) {
                     friendHere = friend;
@@ -94,20 +95,26 @@ public class GamePaint extends JPanel implements Runnable {
                     } else {
                         level = new Level(levelNumber);   // สร้างด่านใหม่ กับดักกลับเป็นแบบเดิม
                         player.respawn(SPAWN_X, SPAWN_Y);
+                        atDoor = false;
                     }
                 }
             } else if (!win) {
-                player.update(level.getFloors()); //อัปเดตตัวละคร
+                if (!atDoor) {
+                    player.update(level.getFloors()); //อัปเดตตัวละคร (เข้าประตูแล้วไม่ขยับ)
+                }
                 level.update(player, friendHere); //เช็คกับดัก
 
-                if (level.isDead(player)) {
+                if (!atDoor && level.isDead(player)) {
                     deaths++;
                     dying = true;
                     friendDied = false;
                     waitTime = WAIT_TIME;
-                } else if (level.isWin(player) && canLeave()) {
-                    dying = false;
-                    waitTime = WAIT_TIME;
+                } else if (atDoor || level.isWin(player)) {
+                    atDoor = true;
+                    if (canLeave()) {
+                        dying = false;
+                        waitTime = WAIT_TIME;
+                    }
                 }
             }
 
@@ -121,10 +128,10 @@ public class GamePaint extends JPanel implements Runnable {
     }
 
     // เล่นคนเดียว: เข้าประตูได้เลย ยกเว้นด่านเล่น 2 คน
-    // เล่นกับเพื่อน: ทุกด่านต้องอยู่ที่ประตูพร้อมกันทั้งคู่
+    // เล่นกับเพื่อน: ทุกด่านต้องรอจนเพื่อนเข้าประตูมาด้วย
     private boolean canLeave() {
         if (network == null) return levelNumber < Level.FIRST_COOP_LEVEL;
-        return friendHere != null && level.isWin(friendHere);
+        return friendHere != null && network.friendAtDoor;
     }
 
     @Override
@@ -135,10 +142,10 @@ public class GamePaint extends JPanel implements Runnable {
         boolean firstHalf = waitTime > WAIT_TIME / 2;   // ยังไม่ได้เปลี่ยนด่าน
 
         level.draw(g2);
-        if (friendHere != null) {
+        if (friendHere != null && !network.friendAtDoor) {   // เพื่อนเข้าประตูแล้วก็ไม่ต้องวาด
             friendHere.draw(g2);
         }
-        if (!(firstHalf && !dying)) {   // เข้าประตูแล้ว ไก่หายเข้าไปในประตู
+        if (!atDoor && !(firstHalf && !dying)) {   // เข้าประตูแล้ว ไก่หายเข้าไปในประตู
             player.draw(g2);
         }
 
@@ -147,8 +154,10 @@ public class GamePaint extends JPanel implements Runnable {
         g2.drawString("Level " + levelNumber + "   Deaths: " + deaths, 20, 30);
         if (network == null && levelNumber >= Level.FIRST_COOP_LEVEL && !win) {
             g2.drawString("2 PLAYERS LEVEL - need a friend!", 20, 60);
-        } else if (network != null && waitTime == 0 && !win && level.isWin(player)) {
+        } else if (network != null && waitTime == 0 && !win && atDoor) {
             g2.drawString("Waiting for friend at the door...", 20, 60);
+        } else if (network != null && waitTime == 0 && !win && friendHere != null && network.friendAtDoor) {
+            g2.drawString("Friend is waiting at the door!", 20, 60);
         }
 
         if (waitTime > 0) {

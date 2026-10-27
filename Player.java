@@ -36,12 +36,22 @@ public class Player extends GameObject {
     }
 
     private Image load(String color, String name) {
+        String path = color + "/frames/" + name;
         try {
-            return ImageIO.read(new File(color + "/frames/" + name));
+            File file = new File(path);
+            if (file.exists()) {
+                return ImageIO.read(file);
+            }
+            // รันจากโฟลเดอร์อื่น ลองหาในโฟลเดอร์เดียวกับไฟล์ .class
+            java.net.URL url = Player.class.getResource("/" + path);
+            if (url != null) {
+                return ImageIO.read(url);
+            }
+            System.out.println("Image not found: " + file.getAbsolutePath());
         } catch (Exception e) {
             System.out.println("Failed Upload " + name + " : " + e.getMessage());
-            return null;
         }
+        return null;
     }
 
     // เลือกรูปตามทิศทางและท่าทาง

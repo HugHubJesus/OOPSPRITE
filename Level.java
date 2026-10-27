@@ -45,11 +45,12 @@ public class Level {
             spikes.add(new Spike(860, GROUND_Y - Spike.SIZE, 780));
             door = new Door(200, GROUND_Y - 60, 920);
         } else if (number == 5) {
-            // พื้นร่วงเหมือนด่าน 1 ให้ตายใจ แต่จริงๆ พื้นตรงประตูก็ร่วงด้วย ต้องกระโดดเข้าประตูเลย
+            // พื้นร่วงเหมือนด่าน 1 ให้ตายใจ แต่พื้นก่อนถึงประตูก็ร่วงด้วย ต้องกระโดดไปลงพื้นตรงประตู
             floors.add(new GameFloor(0, GROUND_Y, 300, GROUND_H));
             floors.add(new FallingFloor(300, GROUND_Y, 100, GROUND_H, 300));
             floors.add(new GameFloor(400, GROUND_Y, 250, GROUND_H));
-            floors.add(new FallingFloor(650, GROUND_Y, 350, GROUND_H, 750));
+            floors.add(new FallingFloor(650, GROUND_Y, 190, GROUND_H, 750));
+            floors.add(new GameFloor(840, GROUND_Y, 160, GROUND_H));   // พื้นตรงประตู ไว้ยืนรอเพื่อน
             spikes.add(new Spike(520, GROUND_Y - Spike.SIZE, 0));
             door = new Door(860, GROUND_Y - 60, 860);
         } else if (number == 6) {
